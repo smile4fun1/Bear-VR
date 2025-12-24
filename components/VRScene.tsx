@@ -84,6 +84,7 @@ function VRSceneContent() {
   const setMapData = useStore((state) => state.setMapData);
   const [canvasReady, setCanvasReady] = useState(false);
   const [webglSupported, setWebglSupported] = useState<boolean | null>(null);
+  const [useXRWrapper, setUseXRWrapper] = useState(true);
 
   useEffect(() => {
     console.log('VRScene mounted successfully');
@@ -255,6 +256,26 @@ function VRSceneContent() {
   return (
     <ErrorBoundary>
       <VRButton />
+      
+      {/* Show fallback button if XR wrapper fails */}
+      {!useXRWrapper && (
+        <div style={{
+          position: 'absolute',
+          top: '20px',
+          left: '50%',
+          transform: 'translateX(-50%)',
+          zIndex: 1000,
+          background: '#8b5cf6',
+          color: 'white',
+          padding: '12px 24px',
+          borderRadius: '8px',
+          cursor: 'pointer',
+          fontSize: '14px'
+        }} onClick={() => setUseXRWrapper(true)}>
+          ⚠️ XR Wrapper Disabled - Click to Re-enable
+        </div>
+      )}
+
       <Canvas
         shadows
         camera={{ position: [0, 8, 45], fov: 75 }}
@@ -274,19 +295,35 @@ function VRSceneContent() {
         }}
         onError={(error) => {
           console.error('❌ Canvas error:', error);
+          // Disable XR wrapper on error
+          setUseXRWrapper(false);
         }}
         performance={{ min: 0.5 }} // Quest optimization
+        frameloop="always"
       >
-        <XR>
-          <Scene />
-          <OrbitControls 
-            makeDefault 
-            minDistance={5}
-            maxDistance={100}
-            enableDamping
-            dampingFactor={0.05}
-          />
-        </XR>
+        {useXRWrapper ? (
+          <XR>
+            <Scene />
+            <OrbitControls 
+              makeDefault 
+              minDistance={5}
+              maxDistance={100}
+              enableDamping
+              dampingFactor={0.05}
+            />
+          </XR>
+        ) : (
+          <>
+            <Scene />
+            <OrbitControls 
+              makeDefault 
+              minDistance={5}
+              maxDistance={100}
+              enableDamping
+              dampingFactor={0.05}
+            />
+          </>
+        )}
       </Canvas>
     </ErrorBoundary>
   );
