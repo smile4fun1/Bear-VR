@@ -282,16 +282,27 @@ function VRSceneContent() {
         gl={{ 
           antialias: false, // Disable AA for Quest performance
           alpha: false,
-          powerPreference: 'high-performance',
-          xr: { enabled: true } // Mark as XR compatible
+          powerPreference: 'high-performance'
         }}
-        onCreated={(state) => {
+        onCreated={async (state) => {
           console.log('✅ Canvas created successfully');
           console.log('Renderer:', state.gl.capabilities);
           
           // Mark WebGL context as XR compatible (critical for Quest)
-          state.gl.xr.enabled = true;
-          console.log('✅ WebXR enabled on renderer');
+          try {
+            state.gl.xr.enabled = true;
+            console.log('✅ WebXR enabled on renderer');
+            
+            // Make the context XR compatible if WebXR is available
+            if ('xr' in navigator && state.gl.domElement) {
+              const canvas = state.gl.domElement;
+              const ctx = canvas.getContext('webgl2', { xrCompatible: true }) || 
+                          canvas.getContext('webgl', { xrCompatible: true });
+              console.log('✅ WebGL context marked as XR compatible');
+            }
+          } catch (err) {
+            console.error('Error enabling XR:', err);
+          }
         }}
         onError={(error) => {
           console.error('❌ Canvas error:', error);
