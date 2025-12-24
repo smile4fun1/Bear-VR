@@ -3,21 +3,24 @@
 import { useEffect } from 'react';
 import { Canvas } from '@react-three/fiber';
 import { OrbitControls, Grid, Environment } from '@react-three/drei';
+import { XR, createXRStore } from '@react-three/xr';
 import { useStore } from '@/lib/store';
 import { ServiRobot } from './ServiRobot';
-import { Telemetry } from './Telemetry';
-import { Terminal } from './Terminal';
 import { Annotations } from './Annotations';
 import { MapEditor } from './MapEditor';
-import { VRInterface } from './VRInterface';
 import { Restaurant } from './Restaurant';
-import { RoomScanner } from './RoomScanner';
-import { RobotManager } from './RobotManager';
+import { UnifiedMenu } from './UnifiedMenu';
+import { PlayerAvatar } from './PlayerAvatar';
+import { VRControllers } from './VRControllers';
+import { VRButton } from './VRButton';
 import { v4 as uuidv4 } from 'uuid';
 import * as THREE from 'three';
 
+const xrStore = createXRStore();
+
 function Scene() {
   const settings = useStore((state) => state.settings);
+  const currentUser = useStore((state) => state.currentUser);
 
   return (
     <>
@@ -43,13 +46,21 @@ function Scene() {
       {settings.showAxes && <axesHelper args={[5]} />}
 
       <ServiRobot />
-      <VRInterface />
-      <Telemetry />
-      <Terminal />
+      <UnifiedMenu />
       <Annotations />
       <MapEditor />
-      <RoomScanner />
-      <RobotManager />
+
+      {/* Player avatar (visible to others) */}
+      {currentUser && (
+        <PlayerAvatar 
+          userId={currentUser.id} 
+          color={currentUser.color} 
+          isLocal={true}
+        />
+      )}
+
+      {/* VR Controllers */}
+      <VRControllers />
     </>
   );
 }
@@ -138,20 +149,25 @@ function VRSceneContent() {
   }, []);
 
   return (
-    <Canvas
-      shadows
-      camera={{ position: [0, 8, 45], fov: 75 }}
-      gl={{ antialias: true }}
-    >
-      <Scene />
-      <OrbitControls 
-        makeDefault 
-        minDistance={5}
-        maxDistance={100}
-        enableDamping
-        dampingFactor={0.05}
-      />
-    </Canvas>
+    <>
+      <VRButton />
+      <Canvas
+        shadows
+        camera={{ position: [0, 8, 45], fov: 75 }}
+        gl={{ antialias: true }}
+      >
+        <XR store={xrStore}>
+          <Scene />
+          <OrbitControls 
+            makeDefault 
+            minDistance={5}
+            maxDistance={100}
+            enableDamping
+            dampingFactor={0.05}
+          />
+        </XR>
+      </Canvas>
+    </>
   );
 }
 
