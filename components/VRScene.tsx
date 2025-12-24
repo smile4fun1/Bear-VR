@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { Canvas } from '@react-three/fiber';
 import { OrbitControls, Grid, Environment } from '@react-three/drei';
 import { XR } from '@react-three/xr';
@@ -13,6 +13,7 @@ import { UnifiedMenu } from './UnifiedMenu';
 import { PlayerAvatar } from './PlayerAvatar';
 import { VRControllers } from './VRControllers';
 import { VRButton } from './VRButton';
+import { ErrorBoundary } from './ErrorBoundary';
 import { v4 as uuidv4 } from 'uuid';
 import * as THREE from 'three';
 
@@ -62,19 +63,48 @@ function VRSceneContent() {
   const addTerminalLine = useStore((state) => state.addTerminalLine);
   const setConnected = useStore((state) => state.setConnected);
   const setMapData = useStore((state) => state.setMapData);
+  const [canvasReady, setCanvasReady] = useState(false);
+  const [webglSupported, setWebglSupported] = useState<boolean | null>(null);
 
   useEffect(() => {
     console.log('VRScene mounted successfully');
+    console.log('User Agent:', navigator.userAgent);
+    
+    // Test WebGL support
+    try {
+      const canvas = document.createElement('canvas');
+      const gl = canvas.getContext('webgl2') || canvas.getContext('webgl');
+      if (gl) {
+        console.log('✅ WebGL is supported');
+        const debugInfo = (gl as any).getExtension('WEBGL_debug_renderer_info');
+        if (debugInfo) {
+          console.log('GPU:', (gl as any).getParameter(debugInfo.UNMASKED_RENDERER_WEBGL));
+        }
+        setWebglSupported(true);
+      } else {
+        console.error('❌ WebGL is NOT supported');
+        setWebglSupported(false);
+      }
+    } catch (err) {
+      console.error('Error testing WebGL:', err);
+      setWebglSupported(false);
+    }
     
     // Check if WebXR is available
     if ('xr' in navigator) {
-      console.log('WebXR is available');
+      console.log('✅ WebXR is available');
       (navigator as any).xr.isSessionSupported('immersive-vr').then((supported: boolean) => {
         console.log('VR supported:', supported);
       }).catch((err: any) => console.error('Error checking VR support:', err));
     } else {
-      console.warn('WebXR not available on this device');
+      console.warn('⚠️ WebXR not available on this device');
     }
+
+    // Mark canvas as ready after short delay
+    setTimeout(() => {
+      console.log('Attempting to render Canvas...');
+      setCanvasReady(true);
+    }, 500);
   }, []);
 
   useEffect(() => {
@@ -153,13 +183,74 @@ function VRSceneContent() {
     return () => clearInterval(interval);
   }, []);
 
+  // Show WebGL error if not supported
+  if (webglSupported === false) {
+    return (
+      <div style={{
+        width: '100vw',
+        height: '100vh',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        background: '#0f172a',
+        color: 'white',
+        padding: '2rem',
+        flexDirection: 'column',
+        textAlign: 'center'
+      }}>
+        <div style={{ fontSize: '3rem', marginBottom: '1rem' }}>🚫</div>
+        <h1 style={{ fontSize: '2rem', marginBottom: '1rem' }}>WebGL Not Supported</h1>
+        <p style={{ fontSize: '1rem', color: '#94a3b8', maxWidth: '500px' }}>
+          Your browser doesn't support WebGL, which is required for 3D rendering.
+          Please try using a different browser or device.
+        </p>
+      </div>
+    );
+  }
+
+  // Show loading state until canvas is ready
+  if (!canvasReady) {
+    return (
+      <div style={{
+        width: '100vw',
+        height: '100vh',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        background: '#0f172a',
+        color: 'white',
+        fontSize: '1.5rem',
+        fontWeight: 'bold'
+      }}>
+        <div style={{ textAlign: 'center' }}>
+          <div style={{ marginBottom: '1rem' }}>🥽</div>
+          <div>Initializing VR Scene...</div>
+          <div style={{ fontSize: '0.875rem', color: '#94a3b8', marginTop: '0.5rem' }}>
+            Check browser console for logs
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
-    <>
+    <ErrorBoundary>
       <VRButton />
       <Canvas
         shadows
         camera={{ position: [0, 8, 45], fov: 75 }}
-        gl={{ antialias: true }}
+        gl={{ 
+          antialias: true,
+          alpha: false,
+          powerPreference: 'high-performance'
+        }}
+        onCreated={(state) => {
+          console.log('✅ Canvas created successfully');
+          console.log('Renderer:', state.gl.capabilities);
+        }}
+        onError={(error) => {
+          console.error('❌ Canvas error:', error);
+        }}
       >
         <XR>
           <Scene />
@@ -172,15 +263,17 @@ function VRSceneContent() {
           />
         </XR>
       </Canvas>
-    </>
+    </ErrorBoundary>
   );
 }
 
 export default function VRScene() {
   return (
-    <div style={{ width: '100vw', height: '100vh', background: '#0f172a' }}>
-      <VRSceneContent />
-    </div>
+    <ErrorBoundary>
+      <div style={{ width: '100vw', height: '100vh', background: '#0f172a' }}>
+        <VRSceneContent />
+      </div>
+    </ErrorBoundary>
   );
 }
 
