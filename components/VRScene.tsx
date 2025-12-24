@@ -14,15 +14,34 @@ import { PlayerAvatar } from './PlayerAvatar';
 import { VRControllers } from './VRControllers';
 import { VRButton } from './VRButton';
 import { ErrorBoundary } from './ErrorBoundary';
+import { SimpleScene } from './SimpleScene';
 import { v4 as uuidv4 } from 'uuid';
 import * as THREE from 'three';
+import { Suspense } from 'react';
 
 function Scene() {
   const settings = useStore((state) => state.settings);
   const currentUser = useStore((state) => state.currentUser);
 
+  // Check if we're in a VR-capable browser (Quest)
+  const isQuest = typeof navigator !== 'undefined' && 
+    (navigator.userAgent.includes('Quest') || navigator.userAgent.includes('OculusBrowser'));
+
+  console.log('Is Quest Browser:', isQuest);
+
+  // Use simplified scene for Quest to avoid performance issues
+  if (isQuest) {
+    return (
+      <Suspense fallback={null}>
+        <SimpleScene />
+        <VRControllers />
+      </Suspense>
+    );
+  }
+
+  // Full scene for desktop
   return (
-    <>
+    <Suspense fallback={null}>
       <ambientLight intensity={0.4} />
       <directionalLight position={[10, 10, 5]} intensity={0.8} castShadow />
       <directionalLight position={[-10, 10, -5]} intensity={0.3} />
@@ -53,7 +72,7 @@ function Scene() {
 
       {/* VR Controllers */}
       <VRControllers />
-    </>
+    </Suspense>
   );
 }
 
@@ -240,17 +259,23 @@ function VRSceneContent() {
         shadows
         camera={{ position: [0, 8, 45], fov: 75 }}
         gl={{ 
-          antialias: true,
+          antialias: false, // Disable AA for Quest performance
           alpha: false,
-          powerPreference: 'high-performance'
+          powerPreference: 'high-performance',
+          xr: { enabled: true } // Mark as XR compatible
         }}
         onCreated={(state) => {
           console.log('✅ Canvas created successfully');
           console.log('Renderer:', state.gl.capabilities);
+          
+          // Mark WebGL context as XR compatible (critical for Quest)
+          state.gl.xr.enabled = true;
+          console.log('✅ WebXR enabled on renderer');
         }}
         onError={(error) => {
           console.error('❌ Canvas error:', error);
         }}
+        performance={{ min: 0.5 }} // Quest optimization
       >
         <XR>
           <Scene />
