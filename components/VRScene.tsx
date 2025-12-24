@@ -48,14 +48,7 @@ function Scene() {
       <Annotations />
       <MapEditor />
 
-      {/* Player avatar (visible to others) */}
-      {currentUser && (
-        <PlayerAvatar 
-          userId={currentUser.id} 
-          color={currentUser.color} 
-          isLocal={true}
-        />
-      )}
+      {/* Player avatar - NOT rendered for local user, only for others to see */}
 
       {/* VR Controllers */}
       <VRControllers />
