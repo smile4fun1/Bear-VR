@@ -1,0 +1,165 @@
+'use client';
+
+import { useEffect } from 'react';
+import { Canvas } from '@react-three/fiber';
+import { OrbitControls, Grid, Environment } from '@react-three/drei';
+import { useStore } from '@/lib/store';
+import { ServiRobot } from './ServiRobot';
+import { Telemetry } from './Telemetry';
+import { Terminal } from './Terminal';
+import { Annotations } from './Annotations';
+import { MapEditor } from './MapEditor';
+import { VRInterface } from './VRInterface';
+import { Restaurant } from './Restaurant';
+import { RoomScanner } from './RoomScanner';
+import { RobotManager } from './RobotManager';
+import { v4 as uuidv4 } from 'uuid';
+import * as THREE from 'three';
+
+function Scene() {
+  const settings = useStore((state) => state.settings);
+
+  return (
+    <>
+      <ambientLight intensity={0.4} />
+      <directionalLight position={[10, 10, 5]} intensity={0.8} castShadow />
+      <directionalLight position={[-10, 10, -5]} intensity={0.3} />
+
+      <Environment preset="sunset" />
+
+      {/* Restaurant environment */}
+      <Restaurant />
+
+      {settings.showGrid && (
+        <Grid
+          args={[50, 50]}
+          cellSize={1}
+          cellColor="#334155"
+          sectionSize={5}
+          sectionColor="#475569"
+        />
+      )}
+
+      {settings.showAxes && <axesHelper args={[5]} />}
+
+      <ServiRobot />
+      <VRInterface />
+      <Telemetry />
+      <Terminal />
+      <Annotations />
+      <MapEditor />
+      <RoomScanner />
+      <RobotManager />
+    </>
+  );
+}
+
+function VRSceneContent() {
+  const setTelemetry = useStore((state) => state.setTelemetry);
+  const setCurrentUser = useStore((state) => state.setCurrentUser);
+  const addTerminalLine = useStore((state) => state.addTerminalLine);
+  const setConnected = useStore((state) => state.setConnected);
+  const setMapData = useStore((state) => state.setMapData);
+
+  useEffect(() => {
+    // Generate user ID and info
+    const userId = uuidv4();
+    const colors = ['#ef4444', '#3b82f6', '#10b981', '#f59e0b', '#8b5cf6', '#ec4899'];
+    const userColor = colors[Math.floor(Math.random() * colors.length)];
+    
+    const username = `User-${userId.slice(0, 4)}`;
+    const role = 'controller';
+
+    const currentUser = {
+      id: userId,
+      username,
+      role: role as 'viewer' | 'controller',
+      position: [0, 1.6, 3] as [number, number, number],
+      rotation: [0, 0, 0, 1] as [number, number, number, number],
+      color: userColor,
+    };
+
+    setCurrentUser(currentUser);
+    setConnected(true);
+
+    // Simple client-side simulator
+    const getInitialTelemetry = () => ({
+      id: 'SERVI-001',
+      timestamp: Date.now(),
+      position: { x: 0, y: 0, z: 0 },
+      rotation: { x: 0, y: 0, z: 0, w: 1 },
+      velocity: { linear: 0, angular: 0 },
+      battery: { percentage: 85, voltage: 48.2, current: 2.5, temperature: 32 },
+      status: { state: 'idle' as const, mode: 'autonomous' as const, errors: [], warnings: [] },
+      sensors: {
+        lidar: { points: 1024, range: 10 },
+        cameras: { front: true, rear: true, depth: true },
+        imu: { pitch: 0, roll: 0, yaw: 0 },
+        encoders: { left: 0, right: 0 },
+      },
+      network: { connected: true, signalStrength: -45, latency: 12 },
+    });
+
+    let telemetry = getInitialTelemetry();
+
+    const interval = setInterval(() => {
+      const t = Date.now() / 5000;
+      const radius = 2;
+      telemetry.position.x = Math.cos(t) * radius;
+      telemetry.position.y = Math.sin(t) * radius;
+      telemetry.velocity.linear = 0.5 + Math.random() * 0.2;
+      telemetry.battery.percentage = Math.max(20, telemetry.battery.percentage - 0.001);
+      telemetry.sensors.imu.yaw = (t * 50) % 360;
+      telemetry.timestamp = Date.now();
+      setTelemetry({ ...telemetry });
+    }, 100);
+
+    // Initialize mock map data
+    setMapData({
+      id: 'map-1',
+      name: 'Test Facility Floor 1',
+      occupancyGrid: [],
+      resolution: 0.05,
+      origin: { x: -10, y: -10 },
+      waypoints: [
+        { id: 'wp-1', x: 2, y: 2, label: 'Kitchen' },
+        { id: 'wp-2', x: -3, y: 4, label: 'Dining Area' },
+        { id: 'wp-3', x: 0, y: -2, label: 'Charging Station' },
+      ],
+      obstacles: [
+        { id: 'obs-1', x: 1, y: -1, radius: 0.5 },
+        { id: 'obs-2', x: -2, y: 2, radius: 0.3 },
+      ],
+    });
+
+    addTerminalLine('> Servi VR Diagnostics Ready');
+
+    return () => clearInterval(interval);
+  }, []);
+
+  return (
+    <Canvas
+      shadows
+      camera={{ position: [0, 8, 45], fov: 75 }}
+      gl={{ antialias: true }}
+    >
+      <Scene />
+      <OrbitControls 
+        makeDefault 
+        minDistance={5}
+        maxDistance={100}
+        enableDamping
+        dampingFactor={0.05}
+      />
+    </Canvas>
+  );
+}
+
+export default function VRScene() {
+  return (
+    <div style={{ width: '100vw', height: '100vh', background: '#0f172a' }}>
+      <VRSceneContent />
+    </div>
+  );
+}
+
