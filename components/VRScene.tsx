@@ -64,6 +64,20 @@ function VRSceneContent() {
   const setMapData = useStore((state) => state.setMapData);
 
   useEffect(() => {
+    console.log('VRScene mounted successfully');
+    
+    // Check if WebXR is available
+    if ('xr' in navigator) {
+      console.log('WebXR is available');
+      (navigator as any).xr.isSessionSupported('immersive-vr').then((supported: boolean) => {
+        console.log('VR supported:', supported);
+      }).catch((err: any) => console.error('Error checking VR support:', err));
+    } else {
+      console.warn('WebXR not available on this device');
+    }
+  }, []);
+
+  useEffect(() => {
     // Generate user ID and info
     const userId = uuidv4();
     const colors = ['#ef4444', '#3b82f6', '#10b981', '#f59e0b', '#8b5cf6', '#ec4899'];
