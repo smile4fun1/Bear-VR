@@ -15,17 +15,22 @@ export function VRButton() {
 
   const enterVR = async () => {
     const canvas = document.querySelector('canvas');
-    if (!canvas) return;
+    if (!canvas) {
+      console.error('Canvas not found');
+      return;
+    }
 
     try {
       const session = await (navigator as any).xr.requestSession('immersive-vr', {
-        requiredFeatures: ['local-floor', 'hand-tracking'],
-        optionalFeatures: ['bounded-floor']
+        requiredFeatures: ['local-floor'],
+        optionalFeatures: ['hand-tracking', 'bounded-floor']
       });
       
+      console.log('VR session started successfully');
       // Session will be handled by @react-three/xr
     } catch (err) {
       console.error('Failed to start VR session:', err);
+      alert('Failed to enter VR mode. Make sure you are using a VR-compatible browser.');
     }
   };
 
