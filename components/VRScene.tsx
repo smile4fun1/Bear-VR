@@ -3,7 +3,7 @@
 import { useEffect } from 'react';
 import { Canvas } from '@react-three/fiber';
 import { OrbitControls, Grid, Environment } from '@react-three/drei';
-import { XR, createXRStore } from '@react-three/xr';
+import { XR } from '@react-three/xr';
 import { useStore } from '@/lib/store';
 import { ServiRobot } from './ServiRobot';
 import { Annotations } from './Annotations';
@@ -15,8 +15,6 @@ import { VRControllers } from './VRControllers';
 import { VRButton } from './VRButton';
 import { v4 as uuidv4 } from 'uuid';
 import * as THREE from 'three';
-
-const xrStore = createXRStore();
 
 function Scene() {
   const settings = useStore((state) => state.settings);
@@ -156,7 +154,7 @@ function VRSceneContent() {
         camera={{ position: [0, 8, 45], fov: 75 }}
         gl={{ antialias: true }}
       >
-        <XR store={xrStore}>
+        <XR>
           <Scene />
           <OrbitControls 
             makeDefault 
